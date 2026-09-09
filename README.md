@@ -1,49 +1,49 @@
-# Automatic Cache Keepalive
+# 自动保持缓存在线
 
-Opt-in background refreshes for the active SillyTavern Chat Completion conversation.
+简体中文 | [English](README.en.md)
 
-## Installation / 安装
+为酒馆当前激活的聊天补全对话提供可开关的后台缓存保活功能。
 
-In SillyTavern 1.18.0 or a compatible build, open **Extensions → Install extension**, paste this repository URL, and reload the page:
+## 安装
+
+在 SillyTavern 1.18.0 或兼容版本中，打开「扩展 → 安装扩展」，粘贴下面的仓库地址，安装后刷新页面：
 
 `https://github.com/rashadrao335566/SillyTavern-Cache-Keepalive`
 
-在酒馆的「扩展 → 安装扩展」中粘贴上面的地址，安装后刷新页面。打开「自动保持缓存在线」，默认每 4 分钟后台发送一次刷新请求；连续 6 次上下文不变就暂停，可点击「恢复」。开启后需要先正常发一次消息来取得真实请求。
+插件与[原生源码修改版](https://github.com/rashadrao335566/SillyTavern/tree/feat/automatic-cache-keepalive)共用功能代码。在酒馆中使用插件不需要运行 npm 安装命令。
 
-刷新消息和回复不会写入聊天记录。切换对话、修改历史或提示词配置后，需要正常发送一次来更新快照。保活会产生 API 费用，服务商是否实际命中缓存需要查看其用量记录。仅支持 Chat Completion 连接，浏览器休眠期间无法保证定时运行。
+## 使用
 
-The extension code is shared with the [native source branch](https://github.com/rashadrao335566/SillyTavern/tree/feat/automatic-cache-keepalive). No npm installation is required to use it in SillyTavern.
+打开「扩展 → 自动保持缓存在线」，开启开关，然后正常发送一次聊天消息。默认间隔为 **4 分钟**，支持设置为 0.1～1440 分钟。间隔应短于服务商的缓存有效期。
 
-## Use
-
-Open **Extensions → Automatic cache keepalive**, enable the switch, and send a normal chat message. The default interval is **4 minutes**; the supported range is 0.1–1440 minutes. Choose an interval shorter than your provider's cache lifetime.
-
-The extension retains the last actual request in memory, after prompt assembly and request customization. After the normal reply finishes, it sends a copy of that request with one appended user message:
+插件会在提示词组装和请求定制完成后，将最后一次实际发送的请求保存在内存中。正常回复结束后，定时复制该请求，并在末尾追加一条用户消息：
 
 > 这只是刷新缓存，收到后回复确认即可。
 
-No refresh message or reply is added to the chat. Draft text is untouched. Returned tool calls are discarded without execution. Tool definitions, tool choice, model, system prompt, history, images, thinking settings, output budget, stream setting, and routing parameters are retained. Only `n` is reduced to one and the refresh instruction is appended.
+刷新消息和模型回复都不会写入聊天记录，输入框中的草稿也不会改变。返回的工具调用会直接丢弃，不会执行。原请求中的工具定义、工具选择、模型、系统提示词、历史消息、图片、思考设置、输出预算、流式设置和路由参数均保留；仅将候选回复数量 `n` 设为 1，并追加刷新指令。
 
-After **six completed refreshes of an unchanged context**, automatic refreshes pause. **Resume** starts another cycle. A new normal generation replaces the snapshot and starts a new cycle. Errors and requests lasting longer than 60 seconds pause refreshes; there is no automatic error retry loop.
+同一上下文**连续完成 6 次刷新后自动暂停**。点击「恢复」可以开始新一轮保活；新的正常生成也会替换请求快照并重新开始计数。请求出错或超过 60 秒未完成时会暂停，不会循环自动重试。
 
-Switching chats, editing history, changing a model/preset/connection, or changing world info invalidates the saved request. Send a normal message again to establish a new snapshot. The context comparison includes the full chat, metadata, active character/group, prompt settings and extension settings. Auxiliary quiet requests are excluded. Request bodies are never written to settings or browser storage.
+切换对话、编辑历史、切换模型、预设或连接，以及修改世界信息，都会使已保存的请求失效。此时需要正常发送一次消息，建立新的请求快照。上下文比较包含完整聊天记录、元数据、当前角色或群组、提示词设置及扩展设置。辅助性的静默请求不参与保活。请求正文不会写入设置或浏览器存储。
 
-## Cache behavior and limits
+## 缓存行为与限制
 
-- This keeps the **last real request's input prefix** warm. The model's latest reply was output, not part of that cached input, and is not reconstructed or appended to the snapshot. The next normal turn supplies it through SillyTavern's usual prompt construction.
-- The request is sent through the same SillyTavern backend and provider. The provider must support prompt caching; its cache configuration, minimum token threshold, routing, and cache-hit rules still apply. A successful refresh is not proof of a cache hit. Check provider usage such as `cache_read_input_tokens` or `cached_tokens`.
-- SillyTavern's provider conversion and depth-based cache markers still apply. Appending a user message can affect trailing message grouping or cache breakpoints. Exact preservation is guaranteed for the original **frontend request messages**, not every provider's final wire representation. Cache hits/TTL have not been verified against a paid provider in the automated tests.
-- Billing uses the original model and settings. A model may ignore the acknowledgement instruction and consume up to the original output/thinking budget. Lowering that budget can change thinking configuration and invalidate caches, so this extension does not silently lower it.
-- Keep the browser tab open. Suspended tabs, sleep, network outages and browser timer throttling can let a cache expire. Resuming a tab makes at most one refresh request, never a backlog of missed requests.
-- Snapshots exist only for requests made after enabling this feature. They are dropped on reload. This supports **Chat Completion** connections, not Text Completion/Kobold/NovelAI connections.
-- Use either the built-in version or the standalone extension. A shared ownership guard prevents duplicate timers when both are loaded in one page.
+- 保活对象是**最后一次真实请求的输入前缀**。模型最新回复属于输出，不属于这次请求的缓存输入，因此不会被重新构造或追加到快照中。下一轮正常聊天会通过酒馆原有的提示词组装流程带上这条回复。
+- 刷新请求使用同一个酒馆后端和服务商。服务商必须支持提示词缓存，其缓存配置、最小词元数量、路由和命中规则仍然适用。刷新请求成功不等于缓存命中，需要检查服务商返回的用量字段，例如 `cache_read_input_tokens` 或 `cached_tokens`。
+- 酒馆原有的服务商格式转换和按深度设置的缓存标记仍会生效。追加用户消息可能影响末尾消息的分组或缓存断点。代码保证保留原始**前端请求中的消息**，但不保证所有服务商最终收到的请求格式完全不变。自动化测试尚未使用付费服务商验证缓存命中或有效期续期。
+- 费用按原来的模型和设置计算。模型可能忽略简短确认指令，使用原有的输出或思考预算。降低预算可能改变思考配置并使缓存失效，因此插件不会擅自降低预算。
+- 请保持浏览器标签页打开。标签页挂起、设备休眠、网络中断和浏览器定时器节流都可能导致缓存过期。标签页恢复后最多触发一次刷新，不会集中补发错过的请求。
+- 只保存功能开启后产生的请求快照，刷新页面后快照会丢失。仅支持**聊天补全（Chat Completion）**连接，不支持文本补全（Text Completion）、Kobold 或 NovelAI 连接。
+- 内置版和独立插件版选择一种使用即可。如果同一页面同时加载两者，共用的运行实例检查会防止重复启动定时器。
 
-Provider reference: [Anthropic prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching).
+服务商参考文档：[Anthropic 提示词缓存](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)。
 
-## Implementations
+## 两种实现
 
-The native version is a built-in extension with a read-only `CHAT_COMPLETION_REQUEST_READY` event emitted immediately before transport. Its event payload contains `{ type, body }`, where `body` is the serialized final request. The standalone version uses the same code and a narrowly scoped `fetch` observer on stock builds without that event.
+原生版作为内置扩展运行，在请求发送前通过只读事件 `CHAT_COMPLETION_REQUEST_READY` 取得最终请求。事件数据为 `{ type, body }`，其中 `body` 是序列化后的最终请求正文。独立插件版使用同一套代码；在没有该事件的原版酒馆中，通过仅针对聊天补全接口的 `fetch` 监听取得请求。
 
-## Validation
+## 开发与验证
 
-For development, run `npm ci`, `npm run lint`, `npm test`, and `npm run test:e2e`. Install a Playwright browser with `npx playwright install chromium`, or set `PLAYWRIGHT_CHANNEL=chrome` to use installed Chrome. The browser tests use mocked model responses and cover both the native event and stock fetch observer, including both generation event orders, full-prefix equality, six-refresh pause, manual resume, custom intervals, chat switching, earlier-message edits, quiet request exclusion and disposal.
+开发时依次运行 `npm ci`、`npm run lint`、`npm test` 和 `npm run test:e2e`。可通过 `npx playwright install chromium` 安装测试浏览器，也可以设置环境变量 `PLAYWRIGHT_CHANNEL=chrome`，使用已安装的 Chrome。
+
+浏览器测试使用模拟模型回复，覆盖原生事件和原版酒馆请求监听两条路径，包括普通回复与流式回复的事件顺序、完整请求前缀一致性、6 次后暂停、手动恢复、自定义间隔、切换对话、编辑较早消息、排除静默请求和停用清理。
