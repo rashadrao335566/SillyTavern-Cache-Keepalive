@@ -41,6 +41,20 @@ Switching chats, editing history, changing a model/preset/connection, or changin
 
 Provider reference: [Anthropic prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching).
 
+## Status panel and language
+
+The panel follows SillyTavern's interface language, displaying Chinese or English separately; other languages currently fall back to English. The status, consecutive refresh count, countdown, request snapshot availability, last refresh's cache result and last success time remain visible even with settings collapsed.
+
+A captured request means a replayable snapshot exists, not that the provider reported a cache hit. Cache results come from the last successfully completed refresh: positive read tokens indicate a hit, an explicitly reported zero indicates no hit, and write tokens are shown separately. Missing fields mean unknown; before a refresh completes, the result is not yet checked. This is not a live probe of provider cache availability.
+
+Common Claude, OpenAI-compatible and Gemini cache usage fields are supported, including SSE usage frames. Missing usage never implies a hit or miss. Model and thinking settings are not changed to obtain usage data.
+
+## Updating
+
+Starting with 1.0.3, settings always show the current version, **Check and update**, and **Reload page**. The update action discovers the actual installation folder and reports updated, already current, permission denied or failure. Reload after updating to load the new code. Built-in installations show source-branch update instructions instead of calling the standalone extension updater.
+
+On older versions without these controls, use **Extensions → Manage extensions → Update all**, then reload. SillyTavern's individual update icon is hidden until a successful check finds an update; its absence does not establish that the extension is current. Manually copied installations without Git metadata need to be installed again through the repository URL.
+
 ## Implementations
 
 The native version is a built-in extension with a read-only `CHAT_COMPLETION_REQUEST_READY` event emitted immediately before transport. Its event payload contains `{ type, body }`, where `body` is the serialized final request. The standalone version uses the same code and a narrowly scoped `fetch` observer on stock builds without that event.

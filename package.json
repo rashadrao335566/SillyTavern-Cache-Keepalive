@@ -1,13 +1,13 @@
 {
     "name": "sillytavern-cache-keepalive",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "private": true,
     "type": "module",
     "license": "AGPL-3.0",
     "scripts": {
         "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.json --runInBand",
         "test:e2e": "playwright test",
-        "lint": "eslint index.js keeper.js tests/*.js"
+        "lint": "eslint index.js keeper.js ui.js tests/*.js"
     },
     "devDependencies": {
         "@playwright/test": "^1.56.1",
